@@ -1,0 +1,36 @@
+# Output files
+*.png
+*.gif
+*.mlx
+junk.txt
+
+# Prerequisites
+
+## macOS ##
+# General
+.DS_Store
+.AppleDouble
+.LSOverride
+.DS_Store
+
+# Thumbnails
+._*
+
+### VisualStudioCode ###
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+### VisualStudioCode Patch ###
+# Ignore all local history of files
+.history
+
+### PyCharm Files ###
+.idea
+figures
+report
+__pycache__
+*/__pycache__
+*/frames
