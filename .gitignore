@@ -2,6 +2,8 @@
 *.png
 *.gif
 *.mlx
+*.eps
+*.pdf
 junk.txt
 
 # Prerequisites

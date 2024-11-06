@@ -1,5 +1,7 @@
 """
-1D linear advection convergence test with smooth ICs and varying dx and CFL
+1D linear advection convergence test with smooth ICs (sine wave) and varying dx and CFL
+
+Note: Takes about 3 minutes to run
 
 Author: JWT
 """
@@ -8,15 +10,18 @@ Author: JWT
 import sys, os
 import matplotlib.pyplot as plt
 import numpy as np
+from itertools import combinations
 
 # Import user settings
 from conv_setup import *
 
 # Configure system path
+path = os.path.dirname(__file__)
+
 if (sys.platform[:3] == 'win') or (sys.platform[:3] == 'Win'):
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+    sys.path.append(os.path.abspath(os.path.join(path, '..')))
 else:
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+    sys.path.append(os.path.abspath(os.path.join(path, '..')))
 
 
 # Import grid classes
@@ -100,8 +105,10 @@ if __name__ == '__main__':
 
 
     """ Define number of grid points and CFl numbers to be tested """
-    ngp_list = [101, 201, 401, 601, 801]  # testing number of cells for fair comparison with CABARET
-    CFL_list = [0.4, 0.51, 0.8]
+    # ngp_list = [65, 129, 257, 513, 1025]  # testing number of cells for fair comparison with CABARET
+    # CFL_list = [0.4, 0.5, 0.8]
+    ngp_list = []
+    CFL_list = []
 
     """ Error measures """
     L2_errors_fd = np.empty((len(ngp_list), len(CFL_list)))
@@ -112,7 +119,7 @@ if __name__ == '__main__':
     ms = 5
     y_bottom = 0.
     y_top = 1.
-    line_colours = ['r', 'g', 'b', 'y', 'k']
+    line_colours = ['rx--', 'go--', 'bs--', 'y', 'k']
 
     for cfl in range(len(CFL_list)):
 
@@ -133,17 +140,16 @@ if __name__ == '__main__':
             # x coordinates
             x = var.points_data.coordinates
             # Initial conditions defined with a numpy array
-            ic = np.where((x - center) % 2. < 0.5, np.power(np.sin(2. * (x - center) * np.pi), 2), 0.)
+            ic = np.sin(x)
             # Prescribed velocity field
             v = 1. * np.ones(var.nx + 2)
             '''======================================================'''
 
             '''======PLEASE INPUT INITIAL CONDITIONS FOR CABARET======'''
             # Initial conditions at cell centres defined with a numpy array
-            ic_centres = np.where((x_centres - center) % 2. < 0.5,
-                                  np.power(np.sin(2. * (x_centres - center) * np.pi), 2), 0.)
+            ic_centres = np.sin(x_centres)
             # Initial conditions at cell faces
-            ic_faces = np.where((x_faces - center) % 2. < 0.5, np.power(np.sin(2. * (x_faces - center) * np.pi), 2), 0.)
+            ic_faces = np.sin(x_faces)
             # Prescribed velocity field at cell centres
             v_centre = 1. * np.ones(msh.nx + 2)
             # Prescribed velocity field at cell faces
@@ -165,15 +171,6 @@ if __name__ == '__main__':
 
             msh.enforce_boundary_conditions()
 
-            """ Plotting parameters and visualisations """
-            # Initial conditions
-            # plt.plot(x[1:-1], var.variables_data.values[1:-1], 'k', label='IC')
-            # plt.legend(loc='best')
-            # plt.ylabel(r'$\phi$')
-            # # plt.axhline(H, linestyle=':', color='black')
-            # plt.ylim([y_bottom, y_top])
-            # plt.pause(1)
-
             t = 0 # Initial time
             while abs(FINAL_TIME - t) > 1.e-7:
 
@@ -191,83 +188,123 @@ if __name__ == '__main__':
                 """ CABARET advector """
                 cabaret_1d(msh)
 
-                # Replot
-                # plt.cla()
-                # plt.plot(x[1:-1], var.variables_data.values[1:-1], 'b', label='Time = ' + '%.2f' % (t + dt) + ' s', linewidth=lw)
-                # plt.title(r'$CFL = $' + str(CFL_list[cfl]))
-                # plt.legend(loc='lower left')
-                # plt.xlabel('x')
-                # plt.ylabel(r'$\phi$')
-                # plt.ylim([y_bottom, y_top])
-                # plt.pause(0.01)
-
                 t += dt
 
             """ Analytical solution """
-            exact_solution_fd = np.where((x[1:-1] - center) % 2. < 0.5, np.power(np.sin(2. * (x[1:-1] - center) * np.pi), 2), 0.)
-            exact_solution_cab = np.where((x_centres[1:-1] - center) % 2. < 0.5, np.power(np.sin(2. * (x_centres[1:-1] - center) * np.pi), 2), 0.)
-            # plt.plot(x[1:-1], exact_solution, 'k--', label='Exact soln', linewidth=lw)
-            # plt.legend(loc='best')
-            # plt.ylabel(r'$\phi$')
-            # plt.title(r'$CFL = $' + str(CFL) + ', ' + r'$T = L^{-1} u$')
-            # plt.axhline(0, linestyle=':', color='black')
-            # plt.grid()
-            # plt.show()
+            exact_solution_fd = np.sin(x[1:-1] - v[1:-1] * FINAL_TIME)
+            exact_solution_cab = np.sin(x_centres[1:-1] - v_centre[1:-1] * FINAL_TIME)
 
             """ Append L2 error to list """
             L2_errors_fd[ngp][cfl] = compute_l2_err(var.variables_data.values[1:-1], exact_solution_fd, var.dx)
             L2_errors_cab[ngp][cfl] = compute_l2_err(msh.cell_centre_values[1:-1, 0], exact_solution_cab, var.dx)
 
-    # print(L2_errors)
 
-    """ Plot convergence """
+    """ Manual input of errors for faster plotting """
+    ngp_list = [65., 129., 257., 513., 1025.]
+    CFL_list = [0.4, 0.5, 0.8]
+    dx_list = [(DOMAIN_BOUNDARIES[1][0] - DOMAIN_BOUNDARIES[0][0]) / d for d in np.array(ngp_list) - 1]
+
+    L2_errors_fd = np.array([[0.16899958, 0.1429633, 0.05983103],
+                            [0.08838383, 0.07421572, 0.03037298],
+                            [0.04521095, 0.03782036, 0.01530311],
+                            [0.02286653, 0.01909208, 0.007681],
+                            [0.01149933, 0.009592, 0.00384789]])
+
+    L2_errors_cab = np.array([[1.85288587e-03, 6.41224650e-08, 1.26143326e-03],
+                              [5.48948872e-04, 2.83469309e-09, 3.41181834e-04],
+                              [1.69172889e-04, 1.25286357e-10, 9.08867718e-05],
+                              [5.17634909e-05, 5.53722377e-12, 2.39328136e-05],
+                              [1.60151578e-05, 2.44871448e-13, 6.18840552e-06]])
+
+    """ Compute numerical order of convergence """
+    # for cfl in range(len(CFL_list)):
+    #
+    #     # Calculate n for each unique pair of (epsilon, delta x) values
+    #     n_values = []
+    #     for (i, j) in combinations(range(len(L2_errors_fd[:, cfl])), 2):
+    #         epsilon_1, epsilon_2 = L2_errors_fd[:, cfl][i], L2_errors_fd[:, cfl][j]
+    #         delta_x_1, delta_x_2 = dx_list[i], dx_list[j]
+    #
+    #         # Using the formula provided to calculate n for each pair
+    #         n = (np.log(epsilon_1) - np.log(epsilon_2)) / (np.log(delta_x_1) - np.log(delta_x_2))
+    #         n_values.append(n)
+    #
+    #     # Calculate the average n
+    #     average_n = np.mean(n_values)
+    #
+    #     # Output the result
+    #     print(f"Calculated n values for each pair for CFL = {CFL_list[cfl]}:", n_values)
+    #     print(f"Average value of n for CFL = {CFL_list[cfl]}:", average_n)
+
+    plt.rc('text', usetex=True)
+    """ Plot convergence for FD """
+    plt.xscale('log')
+    plt.yscale('log')
+
     for c in range(len(CFL_list)):
 
-        plt.plot(np.log10(np.array(ngp_list) - 1), np.log10(L2_errors_fd[:, c]), 'x--',
-                 label='1stOrder, CFL = ' + str(CFL_list[c]), linewidth=lw, color=line_colours[c])
+        plt.plot(np.array(ngp_list) - 1, L2_errors_fd[:, c], line_colours[c],
+                 label='FD' + str(CFL_list[c]), lw=lw, ms=ms, fillstyle='none')
 
-        plt.plot(np.log10(np.array(ngp_list) - 1), np.log10(L2_errors_cab[:, c]), 'o--',
-                 label='2ndOrder, CFL = ' + str(CFL_list[c]), linewidth=lw, markersize=ms, fillstyle='none', color=line_colours[c])
+    # Define the desired gradient and constant
+    m1 = -1  # Desired gradient (slope) on the log-log scale
+    m2 = -2
+    C1 = 7  # Constant that sets the vertical position of the line
+    C2 = 3
 
-    # plt.rc('text', usetex=True)
-    # plt.rc('font', family='serif')
+    # Calculate y based on the power law y = C * x^m
+    y1 = C1 * (np.array(ngp_list) - 1) ** m1
+    y2 = C2 * (np.array(ngp_list) - 1) ** m2
 
-    # Define the base of the triangle on the log-log scale
-    base_x = 2.35  # Starting x-coordinate
-    base_y = -0.8  # Starting y-coordinate
-    length = 0.2  # Length of the triangle sides on log scale
-    gradient = -1  # Desired slope of the triangle on log-log scale
-
-    # Calculate the triangle vertices for the general gradient
-    # Top vertex: move `length` along x and y axes to maintain slope of 1
-    x_vertices = [base_x, base_x + length, base_x + length]
-    y_vertices = [base_y, base_y, base_y + gradient * length]
-
-    # Plot the triangle
-    plt.plot(x_vertices + [x_vertices[0]], y_vertices + [y_vertices[0]], 'k', linewidth=lw)
-    plt.text(2.475, -0.9, r'\textbf{m = 1}', usetex=True)
-
-    # Define the base of the triangle on the log-log scale
-    base_x = 2.3  # Starting x-coordinate
-    base_y = -2.3  # Starting y-coordinate
-    length = 0.2  # Length of the triangle sides on log scale
-    gradient = -2  # Desired slope of the triangle on log-log scale
-
-    # Calculate the triangle vertices for the general gradient
-    # Top vertex: move `length` along x and y axes to maintain slope of 1
-    x_vertices = [base_x, base_x + length, base_x + length]
-    y_vertices = [base_y, base_y, base_y + gradient * length]
-
-    # Plot the triangle
-    plt.plot(x_vertices + [x_vertices[0]], y_vertices + [y_vertices[0]], 'k', linewidth=lw)
-    plt.text(2.425, -2.5, r'\textbf{m = 2}', usetex=True)
+    plt.plot(np.array(ngp_list) - 1, y1, 'k:', label=r'$A \Delta x$', lw=lw, ms=ms)
 
     plt.legend(loc='best')
-    plt.xlabel(r'$n_x$')
-    plt.xticks(np.log10(np.array(ngp_list) - 1), [str(n - 1) for n in ngp_list])
-    plt.ylabel(r'$L_2$ error')
-    plt.title(r'Convergence on a $log_{10}-log_{10}$ scale')  # , $T = $' + str(FINAL_TIME) + ' seconds'
-    # plt.axhline(0, linestyle=':', color='black')
+    plt.xlabel(r'$\Delta x$', usetex=True)
+    plt.xticks(np.array(ngp_list) - 1, [f"$2 \pi / {int(nx)}$" for nx in np.array(ngp_list) - 1])
+    plt.ylabel(r'$L_2$ error', usetex=True)
+    plt.title(r'Convergence on a log$_{10}$-log$_{10}$ scale', usetex=True)  # , $T = $' + str(FINAL_TIME) + ' seconds'
     plt.grid()
-    plt.tick_params(axis='both' , direction='in')
+    # plt.tick_params(axis='both', direction='in')
+    plt.savefig(f'{path}/convergence_fd.eps', dpi=1000)
+    plt.show()
+
+    """ Plot convergence for CABARET """
+    # for cfl in range(len(CFL_list)):
+    #
+    #     # Calculate n for each unique pair of (epsilon, delta x) values
+    #     n_values = []
+    #     for (i, j) in combinations(range(len(L2_errors_cab[:, cfl])), 2):
+    #         epsilon_1, epsilon_2 = L2_errors_cab[:, cfl][i], L2_errors_cab[:, cfl][j]
+    #         delta_x_1, delta_x_2 = dx_list[i], dx_list[j]
+    #
+    #         # Using the formula provided to calculate n for each pair
+    #         n = (np.log(epsilon_1) - np.log(epsilon_2)) / (np.log(delta_x_1) - np.log(delta_x_2))
+    #         n_values.append(n)
+    #
+    #     # Calculate the average n
+    #     average_n = np.mean(n_values)
+    #
+    #     # Output the result
+    #     print(f"Calculated n values for each pair for CFL = {CFL_list[cfl]}:", n_values)
+    #     print(f"Average value of n for CFL = {CFL_list[cfl]}:", average_n)
+
+    plt.clf()
+    plt.xscale('log')
+    plt.yscale('log')
+
+    for c in range(len(CFL_list)):
+
+        plt.plot(np.array(ngp_list) - 1, L2_errors_cab[:, c], line_colours[c],
+                 label='CAB' + str(CFL_list[c]), linewidth=lw, markersize=ms, fillstyle='none')
+
+    plt.plot(np.array(ngp_list) - 1, y2, 'k:', lw=lw, ms=ms, label=r'$A \Delta x^{2}$')
+
+    plt.legend(loc='best')
+    plt.xlabel(r'$\Delta x$', usetex=True)
+    plt.xticks(np.array(ngp_list) - 1, [f"$2 \pi / {int(nx)}$" for nx in np.array(ngp_list) - 1])
+    plt.ylabel(r'$L_2$ error', usetex=True)
+    plt.title(r'Convergence on a log$_{10}$-log$_{10}$ scale', usetex=True)
+    plt.grid()
+    # plt.tick_params(axis='both', direction='in')
+    plt.savefig(f'{path}/convergence_cab.eps', dpi=1000)
     plt.show()

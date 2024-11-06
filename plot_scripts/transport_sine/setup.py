@@ -8,7 +8,7 @@ import numpy as np
 """======SPACE-TIME DOMAIN======"""
 NO_OF_DIMENSIONS = 1
 DOMAIN_BOUNDARIES = [[0.], [2. * np.pi]]
-NO_OF_GRID_POINTS = [101]
+NO_OF_GRID_POINTS = [65]
 BOUNDARY_CONDITIONS_TYPE = ["Periodic", "Periodic"]
 FINAL_TIME = 2. * np.pi
 
